@@ -80,30 +80,38 @@ def main(destination, project, network, tag, verbose, wait=True):
     #print  json.dumps({'items': sorted(result['items'], key=lambda x: x['priority'], reverse=False)}, indent=4)
     #print json.dumps(result, indent=4)   
 
+
+
+    found_route = False
+    priority = 1000
 # evaluate each route to see if the destination IP range matches the destination IP
 
     for item in result['items']:
     	#print ('tag match is %s', (tag in item['tags']))
         #print json.dumps(item, indent=4)
+        
+        
+        if found_route and (item['priority'] > priority) :
+            break
+            
     	if ('tags' not in item ) or (tag in item['tags']) :
     	# either no tag parameter was specified (evaluate routes that apply to all) or tag matched the list of tags in the route
 			if ipaddress.ip_address(destination) in ipaddress.ip_network(item['destRange']):
-				if str(verbose) <> "None" : 
-					print ('Route "%s" with destination range of %s matched the destination IP %s' % (item['name'],item['destRange'], destination))
-				#print json.dumps(item, indent=4)
-				if 'nextHopIp' in item:
-					print 'Route "%s" will be used. Traffic will be sent to IP %s.' % (item['name'], item['nextHopIp'])
-				if 'nextHopGateway' in item:
-					print 'Route "%s" will be used. Traffic will be sent to "%s".' % (item['name'], item['nextHopGateway'].rpartition('/')[2])
-				if 'nextHopNetwork' in item:
-					print 'Route "%s" will be used. Traffic will be sent to Network "%s".' % (item['name'], item['nextHopNetwork'].rpartition('/')[2])
-				if 'nextHopInstance' in item:
-					print 'Route "%s" will be used. Traffic will be sent to instance "%s".' % (item['name'], item['nextHopInstance'].rpartition('/')[2])        		
-				if 'nextHopVpnTunnel' in item:
-					print 'Route "%s" will be used. Traffic will be sent to VPN Tunnel "%s".' % (item['name'], item['nextHopVpnTunnel'].rpartition('/')[2])        		
-				
-								
-				break
+			
+			    if str(verbose) <> "None" : 
+			        print ('Route "%s" with destination range of %s matched the destination IP %s' % (item['name'],item['destRange'], destination))
+
+			    if not found_route :
+			        best_route = item
+			        found_route = True
+			        priority = item['priority']
+			    else:
+			        if (int(item['destRange'].rpartition('/')[2]) > int(best_route['destRange'].rpartition('/')[2]) ):
+			            best_route = item
+			            if str(verbose) <> "None" : 
+			                print ('Route "%s" has longer mask than the previous matched route' % item['name'])
+
+
 			else: 
 				if str(verbose) <> "None" : print ('Route "%s" with destination range of %s did not match the destination IP %s' % (item['name'],item['destRange'], destination))
     	else:
@@ -114,6 +122,20 @@ def main(destination, project, network, tag, verbose, wait=True):
 					print ('Route "%s" with destination range of %s and tag "%s" skipped since no tag parameter was specified' % (item['name'],item['destRange'], item['tags']))
 
     print(' ')
+
+
+    item = best_route
+    if 'nextHopIp' in item:
+        print 'Route "%s" will be used. Traffic will be sent to IP %s.' % (item['name'], item['nextHopIp'])
+    if 'nextHopGateway' in item:
+        print 'Route "%s" will be used. Traffic will be sent to "%s".' % (item['name'], item['nextHopGateway'].rpartition('/')[2])
+    if 'nextHopNetwork' in item:
+        print 'Route "%s" will be used. Traffic will be sent to Network "%s".' % (item['name'], item['nextHopNetwork'].rpartition('/')[2])
+    if 'nextHopInstance' in item:
+        print 'Route "%s" will be used. Traffic will be sent to instance "%s".' % (item['name'], item['nextHopInstance'].rpartition('/')[2])        		
+    if 'nextHopVpnTunnel' in item:
+        print 'Route "%s" will be used. Traffic will be sent to VPN Tunnel "%s".' % (item['name'], item['nextHopVpnTunnel'].rpartition('/')[2])        		
+    
 
     
 
